@@ -5,12 +5,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 
 	"life-tracker/backend/internal/habits"
-
 )
 
 func main() {
@@ -27,13 +26,20 @@ func main() {
 	defer pool.Close()
 
 	r := gin.Default()
-	habitsRepo := habits.NewRepository(pool)
-	habitsHandler := habits.NewHandler(habitsRepo)
+	   habitsRepo := habits.NewRepository(pool)
+	   // Ensure the habits and habit_completions tables exist
+	   if err := habitsRepo.EnsureHabitsTable(ctx); err != nil {
+			   log.Fatalf("Failed to ensure habits table: %v", err)
+	   }
+	   if err := habitsRepo.EnsureHabitCompletionsTable(ctx); err != nil {
+			   log.Fatalf("Failed to ensure habit_completions table: %v", err)
+	   }
+	   habitsHandler := habits.NewHandler(habitsRepo)
 
-	r.GET("/habits", habitsHandler.ListHabits)
-	r.POST("/habits", habitsHandler.CreateHabit)
+	   r.GET("/habits", habitsHandler.ListHabits)
+	   r.POST("/habits", habitsHandler.CreateHabit)
 
-	if err := r.Run(":8080"); err != nil {
-		log.Fatalf("Failed to run server: %v", err)
-	}
+	   if err := r.Run(":8080"); err != nil {
+			   log.Fatalf("Failed to run server: %v", err)
+	   }
 }
