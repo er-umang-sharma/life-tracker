@@ -34,6 +34,22 @@ func (h *Handler) CreateHabit(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
+	// Validation: name and frequency must not be empty, frequency must be valid
+	if req.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Name is required"})
+		return
+	}
+	validFrequencies := map[string]bool{
+		string(FrequencyDaily):    true,
+		string(FrequencyWeekly):   true,
+		string(FrequencyWeekdays): true,
+		string(FrequencyWeekends): true,
+		string(FrequencyCustom):   true,
+	}
+	if req.Frequency == "" || !validFrequencies[req.Frequency] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid or missing frequency"})
+		return
+	}
 	if err := h.repo.CreateHabit(context.Background(), req.Name, req.Frequency, req.Reminder); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -56,4 +72,15 @@ func (h *Handler) MarkHabitDone(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusOK)
+}
+
+// ListHabitCompletions returns all completion dates for a habit
+func (h *Handler) ListHabitCompletions(c *gin.Context) {
+	id := c.Param("id")
+	completions, err := h.repo.ListHabitCompletions(context.Background(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, completions)
 }
